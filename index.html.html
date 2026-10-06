@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>เครื่องมือสรุปข้อมูลจุดความร้อน + Baseline</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F3EA; --surface:#FFFFFF; --surface-2:#FBF9F3;
+  --ink:#242620; --ink-soft:#585A4F; --ink-muted:#8B8B7C;
+  --line:rgba(36,38,32,0.14); --line-strong:rgba(36,38,32,0.26);
+  --ember:#B8451C; --ember-ink:#7A2E12; --ember-bg:#F7E4D8;
+  --pine:#2F4B3C; --pine-ink:#1D2F26; --pine-bg:#E4EBE4;
+  --blue:#2F5C8A; --blue-ink:#1D3A57; --blue-bg:#E2ECF5;
+  --focus:0 0 0 2px rgba(184,69,28,0.45);
+  --font-ui:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-head:'Spectral',Georgia,serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1B1C17; --surface:#242620; --surface-2:#1F211B;
+    --ink:#EDEAE0; --ink-soft:#BFBEB0; --ink-muted:#8C8C7C;
+    --line:rgba(237,234,224,0.16); --line-strong:rgba(237,234,224,0.28);
+    --ember:#E17A46; --ember-ink:#FBD9C3; --ember-bg:#3A2416;
+    --pine:#7FA98D; --pine-ink:#D7E7DB; --pine-bg:#20362A;
+    --blue:#8FB7DC; --blue-ink:#DCEAF6; --blue-bg:#1E2E3D;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1B1C17; --surface:#242620; --surface-2:#1F211B;
+  --ink:#EDEAE0; --ink-soft:#BFBEB0; --ink-muted:#8C8C7C;
+  --line:rgba(237,234,224,0.16); --line-strong:rgba(237,234,224,0.28);
+  --ember:#E17A46; --ember-ink:#FBD9C3; --ember-bg:#3A2416;
+  --pine:#7FA98D; --pine-ink:#D7E7DB; --pine-bg:#20362A;
+  --blue:#8FB7DC; --blue-ink:#DCEAF6; --blue-bg:#1E2E3D;
+}
+*{box-sizing:border-box;}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+body{
+  margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-ui);
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px; margin:0 auto; padding:2.5rem 1.25rem 4rem;}
+header.page{margin-bottom:2rem;}
+h1{font-family:var(--font-head); font-weight:600; font-size:26px; margin:0 0 .4rem;}
+.sub{color:var(--ink-soft); font-size:15px; line-height:1.6; max-width:70ch; margin:0 0 1rem;}
+.defs{display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.75rem;}
+.def-chip{
+  font-size:12.5px; padding:5px 10px; border-radius:999px; border:1px solid var(--line);
+  color:var(--ink-soft); background:var(--surface-2); white-space:nowrap;
+}
+.def-chip b{color:var(--ink); font-weight:600;}
+
+.dropzone{
+  border:1.5px dashed var(--line-strong); border-radius:14px; background:var(--surface);
+  padding:2.25rem 1.5rem; text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
+}
+.dropzone.drag{ border-color:var(--ember); background:var(--ember-bg); }
+.dropzone h2{font-family:var(--font-ui); font-size:16px; font-weight:600; margin:.6rem 0 .25rem;}
+.dropzone p{color:var(--ink-muted); font-size:13.5px; margin:0;}
+.dropzone input{display:none;}
+.dropzone.small{padding:1.1rem 1rem;}
+.dropzone.small h2{font-size:14px;}
+
+.filebar{
+  display:flex; align-items:center; gap:.75rem; margin-top:1rem; padding:.7rem 1rem;
+  background:var(--surface); border:1px solid var(--line); border-radius:10px; font-size:13.5px;
+}
+.filebar .name{font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.filebar .meta{color:var(--ink-muted); flex:1;}
+.btn{
+  font-family:var(--font-ui); font-size:13.5px; font-weight:500; padding:.5rem .9rem; border-radius:8px;
+  border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); cursor:pointer;
+}
+.btn:hover{background:var(--surface-2);}
+.btn:focus-visible{outline:none; box-shadow:var(--focus);}
+.btn.primary{ background:var(--ember); border-color:var(--ember); color:#fff; }
+.btn.primary:hover{ filter:brightness(1.05); }
+.btn.sm{padding:.35rem .65rem; font-size:12.5px;}
+
+select, .selectish{
+  font-family:var(--font-ui); font-size:13px; padding:.4rem .6rem; border-radius:8px;
+  border:1px solid var(--line-strong); background:var(--surface); color:var(--ink);
+}
+
+.status{font-size:13.5px; color:var(--ink-soft); margin-top:.6rem;}
+
+section.results{margin-top:2.25rem; display:none;}
+section.results.show{display:block;}
+
+.stat-row{display:flex; flex-wrap:wrap; gap:.75rem; margin-bottom:1.5rem;}
+.stat{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:.85rem 1rem; min-width:150px;}
+.stat .k{font-size:12px; color:var(--ink-muted); margin-bottom:.2rem;}
+.stat .v{font-size:20px; font-weight:600; font-family:var(--font-mono);}
+
+.warn-box{
+  border:1px solid var(--ember); background:var(--ember-bg); color:var(--ember-ink);
+  border-radius:10px; padding:.85rem 1rem; margin-bottom:1.5rem; font-size:13.5px; line-height:1.6;
+}
+.warn-box h3{margin:0 0 .35rem; font-size:13.5px; font-weight:600;}
+.warn-box ul{margin:.2rem 0 0; padding-left:1.1rem;}
+
+.enso-panel{
+  background:var(--surface); border:1px solid var(--line); border-radius:10px;
+  padding:1rem 1.1rem; margin-bottom:1.75rem;
+}
+.enso-panel h3{margin:0 0 .3rem; font-size:15px; font-weight:600; font-family:var(--font-head);}
+.enso-panel .desc{color:var(--ink-muted); font-size:13px; margin:0 0 .75rem; line-height:1.5;}
+.enso-preview{font-size:12.5px; color:var(--ink-soft); margin-top:.6rem;}
+
+.period{margin-bottom:2.5rem;}
+.period h2{font-family:var(--font-head); font-size:18px; font-weight:600; margin:0 0 .2rem;}
+.period .period-note{color:var(--ink-muted); font-size:13px; margin:0 0 .75rem;}
+
+.chiprow{display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; margin-bottom:.6rem;}
+.chiprow .lbl{font-size:12.5px; color:var(--ink-muted); margin-right:.2rem;}
+.chip{
+  font-family:var(--font-ui); font-size:12.5px; padding:.3rem .7rem; border-radius:999px;
+  border:1px solid var(--line-strong); background:var(--surface); color:var(--ink-soft); cursor:pointer;
+}
+.chip:hover{background:var(--surface-2);}
+.chip.active{background:var(--pine); border-color:var(--pine); color:#fff;}
+
+.table-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--surface);}
+table{border-collapse:collapse; width:100%; font-size:13px; font-family:var(--font-mono); white-space:nowrap;}
+thead th{
+  position:sticky; top:0; background:var(--surface-2); text-align:right; font-weight:500;
+  padding:.55rem .65rem; border-bottom:1px solid var(--line); font-family:var(--font-ui); font-size:12px; color:var(--ink-soft);
+}
+thead th:first-child, thead th:nth-child(2){text-align:left;}
+tbody td{padding:.5rem .65rem; text-align:right; border-bottom:1px solid var(--line);}
+tbody td:first-child{text-align:left; font-family:var(--font-ui); font-weight:500;}
+tbody td:nth-child(2){text-align:left; font-family:var(--font-ui); color:var(--ink-muted); font-size:12px;}
+tbody tr.avg-row td{font-weight:600; background:var(--surface-2);}
+tbody tr.avg-row td:first-child{font-family:var(--font-ui);}
+tbody tr.cmp-row td{background:var(--blue-bg); color:var(--blue-ink);}
+tbody tr.cmp-row td:first-child{font-family:var(--font-ui); font-weight:500;}
+tbody tr.diff-row td{color:var(--ink-soft);}
+tbody tr.diff-row td:first-child{font-family:var(--font-ui);}
+td.sum8, td.sum9, th.sum8, th.sum9{color:var(--pine-ink); font-weight:600;}
+tbody tr.flagged td:first-child{color:var(--ember-ink);}
+.chk-cell{text-align:center !important;}
+.note-badge{
+  display:inline-block; font-size:11px; padding:1px 7px; border-radius:999px; margin-left:.35rem;
+  background:var(--ember-bg); color:var(--ember-ink); font-family:var(--font-ui);
+}
+.cmp-controls{display:flex; align-items:center; gap:.5rem; margin-top:.6rem; font-size:13px; color:var(--ink-soft);}
+
+.dl-row{display:flex; flex-wrap:wrap; gap:.6rem; margin-top:.5rem;}
+.dl-msg{font-size:12.5px; color:var(--ink-muted); margin-top:.5rem;}
+
+footer.hint{margin-top:2.5rem; padding-top:1.25rem; border-top:1px solid var(--line); color:var(--ink-muted); font-size:12.5px; line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <h1>เครื่องมือสรุปข้อมูลจุดความร้อน + Baseline</h1>
+    <p class="sub">
+      อัปโหลดไฟล์ raw ที่ export จาก ArcMap (sheet แยกตามปี เช่น "2012", "2013" ...) เครื่องมือนี้คำนวณผลรวมรายปีอัตโนมัติจากตัวเลขรายวันโดยตรง
+      แล้วให้คุณเลือกเองว่าจะเอาปีไหนมาทำ baseline (เลือกมือ หรือเลือกตามกลุ่ม ENSO ถ้าอัปโหลดไฟล์ ENSO ด้วย) พร้อมเทียบกับปีที่ต้องการได้ทันที
+    </p>
+    <div class="defs">
+      <span class="def-chip"><b>Smoke Haze</b> = 1 ก.พ. – 31 พ.ค.</span>
+      <span class="def-chip"><b>Non-Smoke Haze</b> = ช่วงที่เหลือของปี</span>
+      <span class="def-chip"><b>8 จังหวัด</b> = ไม่รวมตาก</span>
+      <span class="def-chip"><b>9 จังหวัด</b> = รวมตาก</span>
+      <span class="def-chip"><b>Baseline</b> = mean ± SD (sample SD) ของปีที่เลือก</span>
+    </div>
+  </header>
+
+  <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="อัปโหลดไฟล์ Excel">
+    <div style="font-size:26px;">⇧</div>
+    <h2>ลากไฟล์ Excel มาวาง หรือคลิกเพื่อเลือกไฟล์</h2>
+    <p>รองรับ .xlsx ที่มี sheet ต่อปี (ชื่อ sheet = ปี เช่น 2012, 2013, ...)</p>
+    <input type="file" id="fileInput" accept=".xlsx,.xls">
+  </div>
+
+  <div class="filebar" id="filebar" style="display:none;">
+    <span class="name" id="fname"></span>
+    <span class="meta" id="fmeta"></span>
+    <button class="btn sm" id="reuploadBtn" type="button">อัปโหลดไฟล์อื่น</button>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="enso-panel">
+    <h3>ข้อมูล ENSO สำหรับจัดกลุ่ม baseline (ไม่บังคับ)</h3>
+    <p class="desc">
+      อัปโหลดไฟล์/sheet ที่มีคอลัมน์ "Year" และคอลัมน์การจำแนก ENSO ของช่วง Smoke Haze / Non-Smoke Haze สองคอลัมน์ก่อนหน้าคอลัมน์ Year
+      (โครงสร้างแบบเดียวกับ sheet "ENSO" ที่คุณใช้อยู่) — อัปโหลดตอนไหนก็ได้ (ก่อนหรือหลังไฟล์ raw หลักก็ได้) เมื่ออัปโหลดครบทั้งคู่แล้วจะมีปุ่มลัดให้เลือกปีตามกลุ่ม El Niño / La Niña / Neutral ปรากฏใต้ตาราง Smoke Haze และ Non-Smoke Haze ด้านล่าง
+    </p>
+    <div class="dropzone small" id="ensoDropzone" tabindex="0" role="button" aria-label="อัปโหลดไฟล์ ENSO">
+      <h2>ลากไฟล์ ENSO มาวาง หรือคลิกเพื่อเลือก</h2>
+      <p>.xlsx — จะอ่านเฉพาะคอลัมน์ Year และคอลัมน์จำแนกก่อนหน้า</p>
+      <input type="file" id="ensoInput" accept=".xlsx,.xls">
+    </div>
+    <div class="enso-preview" id="ensoPreview"></div>
+  </div>
+
+  <section class="results" id="results">
+    <div class="stat-row" id="statRow"></div>
+    <div id="warnBox"></div>
+
+    <div id="periods"></div>
+
+    <div class="period" id="rankingPanel">
+      <h2>อันดับ (Ranking)</h2>
+      <p class="period-note">จัดอันดับจังหวัดหรือปี โดยอิงจาก Baseline (ปีที่เลือกไว้ในตารางด้านบน) หรือค่าจริงของปีใดปีหนึ่ง</p>
+      <div class="cmp-controls" style="flex-wrap:wrap;">
+        <label>ช่วงข้อมูล:
+          <select id="rankPeriod">
+            <option value="allYear">All-Year</option>
+            <option value="smoke">Smoke Haze</option>
+            <option value="nonSmoke">Non-Smoke Haze</option>
+          </select>
+        </label>
+        <label>จัดอันดับ:
+          <select id="rankTarget">
+            <option value="province">จังหวัด</option>
+            <option value="year">ปี</option>
+          </select>
+        </label>
+        <label id="rankBasisWrap">อิงจาก:
+          <select id="rankBasis">
+            <option value="baseline">Baseline (ปีที่เลือกไว้)</option>
+            <option value="year">ปีที่ระบุ</option>
+          </select>
+        </label>
+        <label id="rankBasisYearWrap" style="display:none;">ปี:
+          <select id="rankBasisYear"></select>
+        </label>
+        <label>ผลรวม:
+          <select id="rankSumMode">
+            <option value="sum9">9 จังหวัด (รวมตาก)</option>
+            <option value="sum8">8 จังหวัด (ไม่รวมตาก)</option>
+          </select>
+        </label>
+      </div>
+      <div id="rankingTableWrap"></div>
+    </div>
+
+    <div class="period" id="monthlyPanel">
+      <h2>ข้อมูลดิบรายเดือน (Raw Data — รายเดือน)</h2>
+      <p class="period-note">ดูตัวเลขจุดความร้อนรายเดือนของปีที่เลือก พร้อมอันดับเดือนภายในปีนั้น</p>
+      <div class="cmp-controls">
+        <label for="monthlyYearSelect">เลือกปี:</label>
+        <select id="monthlyYearSelect"></select>
+      </div>
+      <div id="monthlyTableWrap" style="margin-top:.75rem;"></div>
+      <p class="period-note" style="margin-top:1.25rem;">อันดับเดือนในปีนี้ (เรียงจากผลรวม 9 จังหวัดมากไปน้อย)</p>
+      <div id="monthlyRankWrap"></div>
+    </div>
+
+    <div class="dl-row">
+      <button class="btn primary" id="dlXlsx" type="button">ดาวน์โหลดตารางสรุป + baseline (.xlsx)</button>
+      <button class="btn" id="dlCsv" type="button">ดาวน์โหลดข้อมูลรายวันแบบ long format (.csv)</button>
+    </div>
+
+    <div class="dl-msg" id="dlMsg"></div>
+  </section>
+
+  <footer class="hint">
+    ตัวเลขทั้งหมดคำนวณในเบราว์เซอร์ของคุณเท่านั้น ไฟล์ที่อัปโหลดจะไม่ถูกส่งออกไปที่ไหน — ปิดหน้านี้แล้วข้อมูลก็หายไป เปิดใหม่แล้วอัปโหลดไฟล์อีกครั้งได้ทุกเมื่อ
+    SD ที่ใช้เป็น sample standard deviation (หาร n-1) ผลรวม 8/9 จังหวัดคำนวณจากผลรวมรายปีก่อนแล้วค่อยหา mean/SD ของผลรวมนั้น (ไม่ใช่บวก SD รายจังหวัดตรงๆ)
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const PROVINCE_ORDER = ['chiangmai','chiangrai','lampang','lamphun','maehongson','nan','phayao','phrae','tak'];
+const PROVINCE_LABEL = {
+  chiangmai:'Chiang Mai', chiangrai:'Chiang Rai', lampang:'Lampang', lamphun:'Lamphun',
+  maehongson:'Mae Hong Son', nan:'Nan', phayao:'Phayao', phrae:'Phrae', tak:'Tak'
+};
+const PROVINCE_ALIASES = {
+  chiangmai:'chiangmai', chiangrai:'chiangrai', lampang:'lampang', lamphun:'lamphun',
+  maehongson:'maehongson', nan:'nan', phayao:'phayao', phrae:'phrae', tak:'tak',
+  'เชียงใหม่':'chiangmai', 'เชียงราย':'chiangrai', 'ลำปาง':'lampang', 'ลำพูน':'lamphun',
+  'แม่ฮ่องสอน':'maehongson', 'น่าน':'nan', 'พะเยา':'phayao', 'แพร่':'phrae', 'ตาก':'tak'
+};
+const EXCLUDE_FROM_8 = 'tak';
+const MONTH_ABBR = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const SMOKE_MONTHS = [2,3,4,5];
+const MONTH_TH = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const PERIOD_DEFS = [
+  {key:'allYear', title:'All-Year — ผลรวมทั้งปี', note:'ผลรวมของทุกวันในปี', ensoField:null},
+  {key:'smoke', title:'Smoke Haze — 1 ก.พ. ถึง 31 พ.ค.', note:'ผลรวมเฉพาะช่วงหมอกควัน', ensoField:'smoke'},
+  {key:'nonSmoke', title:'Non-Smoke Haze — ช่วงที่เหลือของปี', note:'ผลรวมของทุกวันนอกช่วงหมอกควัน (ม.ค. และ มิ.ย.–ธ.ค.)', ensoField:'nonSmoke'}
+];
+
+let parsedData = null;
+let ensoData = null;
+const compareYearByPeriod = {allYear:null, smoke:null, nonSmoke:null};
+function triggerDownload(filename, blob){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+
+function normalizeKey(s){
+  if(s==null) return '';
+  return String(s).trim().toLowerCase().replace(/[^a-z\u0E00-\u0E7F]/g,'');
+}
+function normalizeHeaderCell(s){ return String(s==null?'':s).trim().toLowerCase(); }
+
+function parseDateLabel(raw){
+  if(raw==null) return null;
+  if(raw instanceof Date) return {month: raw.getMonth()+1, day: raw.getDate()};
+  if(typeof raw === 'number'){
+    const epoch = Date.UTC(1899,11,30);
+    const d = new Date(epoch + raw*86400000);
+    return {month: d.getUTCMonth()+1, day: d.getUTCDate()};
+  }
+  if(typeof raw === 'string'){
+    const m = raw.trim().match(/^(\d{1,2})[\-\/]([A-Za-z]{3,})$/);
+    if(m){
+      const day = parseInt(m[1],10);
+      const idx = MONTH_ABBR.indexOf(m[2].slice(0,3).toLowerCase());
+      if(idx>=0) return {month: idx+1, day};
+    }
+  }
+  return null;
+}
+
+function isLeapYear(y){ return (y%4===0 && y%100!==0) || y%400===0; }
+function buildExpectedDates(year){
+  const dim = [31, isLeapYear(year)?29:28, 31,30,31,30,31,31,30,31,30,31];
+  const out = [];
+  for(let m=1;m<=12;m++){ for(let d=1; d<=dim[m-1]; d++){ out.push({month:m, day:d}); } }
+  return out;
+}
+function emptyVals(){ const o={}; PROVINCE_ORDER.forEach(p=>o[p]=0); return o; }
+function sum8(vals){ return PROVINCE_ORDER.filter(p=>p!==EXCLUDE_FROM_8).reduce((a,p)=>a+vals[p],0); }
+function sum9(vals){ return PROVINCE_ORDER.reduce((a,p)=>a+vals[p],0); }
+function sdSample(arr){
+  const n = arr.length;
+  if(n<2) return 0;
+  const mean = arr.reduce((a,b)=>a+b,0)/n;
+  const variance = arr.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(n-1);
+  return Math.sqrt(variance);
+}
+function mean(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+
+function findHeaderRow(aoa){
+  let best = {idx:-1, count:0, map:{}};
+  for(let r=0; r<Math.min(6, aoa.length); r++){
+    const row = aoa[r] || [];
+    const map = {};
+    let count = 0;
+    for(let c=0; c<row.length; c++){
+      const key = PROVINCE_ALIASES[normalizeKey(row[c])];
+      if(key && map[key]===undefined){ map[key]=c; count++; }
+    }
+    if(count > best.count) best = {idx:r, count, map};
+  }
+  return best;
+}
+
+function processWorkbook(wb){
+  const years = [];
+  const skippedSheets = [];
+  const headerWarnings = [];
+  const rawRecords = [];
+  let negativeCount = 0;
+
+  wb.SheetNames.forEach(sheetName=>{
+    const trimmed = sheetName.trim();
+    if(!/^\d{4}$/.test(trimmed)){ skippedSheets.push(sheetName); return; }
+    const year = parseInt(trimmed,10);
+    const ws = wb.Sheets[sheetName];
+    const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:true, blankrows:true});
+    const header = findHeaderRow(aoa);
+    if(header.count === 0){
+      headerWarnings.push(`ปี ${year}: ไม่พบคอลัมน์จังหวัดในหัวตาราง ข้ามปีนี้`);
+      return;
+    }
+    if(header.count < 9){
+      const missing = PROVINCE_ORDER.filter(p=>header.map[p]===undefined).map(p=>PROVINCE_LABEL[p]);
+      headerWarnings.push(`ปี ${year}: พบจังหวัดในหัวตารางแค่ ${header.count}/9 (ขาด: ${missing.join(', ')})`);
+    }
+    let noteText = null;
+    for(let r=0; r<Math.min(6, aoa.length); r++){
+      (aoa[r]||[]).forEach(cell=>{ if(typeof cell === 'string' && /อัพเดท|update/i.test(cell)) noteText = cell.trim(); });
+    }
+    const allYear = emptyVals(), smoke = emptyVals(), nonSmoke = emptyVals();
+    const monthly = {};
+    for(let m=1;m<=12;m++) monthly[m] = emptyVals();
+    let lastNonZero = null;
+    const expected = buildExpectedDates(year);
+    let idx = 0, recovered = 0, mismatchWarned = false;
+    for(let r=header.idx+1; r<aoa.length && idx<expected.length; r++){
+      const row = aoa[r] || [];
+      const exp = expected[idx];
+      let dateInfo = parseDateLabel(row[0]);
+      if(!dateInfo){
+        dateInfo = exp; recovered++;
+      }else if(dateInfo.month!==exp.month || dateInfo.day!==exp.day){
+        if(!mismatchWarned){
+          headerWarnings.push(`ปี ${year}: ลำดับวันที่คลาดเคลื่อน (พบป้าย "${dateInfo.day}/${dateInfo.month}" ที่ตำแหน่งซึ่งควรเป็น "${exp.day}/${exp.month}") — ตรวจสอบว่ามีแถวขาดหรือเกินในไฟล์ต้นฉบับปีนี้`);
+          mismatchWarned = true;
+        }
+      }
+      const bucket = SMOKE_MONTHS.includes(dateInfo.month) ? smoke : nonSmoke;
+      let rowHasValue = false;
+      PROVINCE_ORDER.forEach(p=>{
+        const colIdx = header.map[p];
+        let val = colIdx===undefined ? 0 : row[colIdx];
+        if(val==null || val==='') val = 0;
+        val = typeof val === 'number' ? val : (parseFloat(val) || 0);
+        if(val < 0){ negativeCount++; val = 0; }
+        if(val > 0) rowHasValue = true;
+        allYear[p] += val; bucket[p] += val; monthly[dateInfo.month][p] += val;
+        rawRecords.push({year, month:dateInfo.month, day:dateInfo.day, province:p, count:val});
+      });
+      if(rowHasValue){
+        if(!lastNonZero || dateInfo.month>lastNonZero.month || (dateInfo.month===lastNonZero.month && dateInfo.day>lastNonZero.day)) lastNonZero = dateInfo;
+      }
+      idx++;
+    }
+    if(recovered>0){
+      headerWarnings.push(`ปี ${year}: กู้คืนข้อมูล ${recovered} แถวที่ไม่มีป้ายวันที่ในคอลัมน์แรก (ใช้ตำแหน่งแถวแทนเพื่อระบุวันที่) — แนะนำให้กลับไปตรวจ/เติมป้ายวันที่ในไฟล์ต้นฉบับ`);
+    }
+    years.push({year, allYear, smoke, nonSmoke, monthly, lastNonZero, note:noteText, include:{allYear:true, smoke:true, nonSmoke:true}});
+  });
+
+  years.sort((a,b)=>a.year-b.year);
+  if(years.length){
+    const maxYear = years[years.length-1];
+    if(!maxYear.lastNonZero || maxYear.lastNonZero.month < 12){
+      maxYear.include.allYear = false; maxYear.include.smoke = false; maxYear.include.nonSmoke = false;
+    }
+  }
+  return {years, skippedSheets, headerWarnings, rawRecords, negativeCount};
+}
+
+function broadEnso(text){
+  if(!text) return null;
+  const t = String(text).toLowerCase();
+  if(t.includes('nino')||t.includes('niño')) return 'El Niño';
+  if(t.includes('nina')||t.includes('niña')) return 'La Niña';
+  if(t.includes('neutral')) return 'Neutral';
+  return String(text).trim();
+}
+function canonicalizeFine(text){
+  if(!text) return null;
+  const t = String(text).toLowerCase();
+  if(t.includes('neutral')) return 'Neutral';
+  let strength = '';
+  if(t.includes('weak')) strength='Weak ';
+  else if(t.includes('moderate')) strength='Moderate ';
+  else if(t.includes('strong')) strength='Strong ';
+  if(t.includes('nino')||t.includes('niño')) return (strength+'El Niño').trim();
+  if(t.includes('nina')||t.includes('niña')) return (strength+'La Niña').trim();
+  return String(text).trim();
+}
+const BROAD_ORDER = ['Neutral','El Niño','La Niña'];
+const FINE_ORDER = ['Neutral','Weak El Niño','Moderate El Niño','Strong El Niño','Weak La Niña','Moderate La Niña','Strong La Niña'];
+
+function parseEnsoWorkbook(wb){
+  for(const sheetName of wb.SheetNames){
+    const ws = wb.Sheets[sheetName];
+    const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:true});
+    for(let r=0; r<Math.min(6, aoa.length); r++){
+      const row = aoa[r] || [];
+      const yearColIdx = row.findIndex(c=>normalizeHeaderCell(c)==='year');
+      if(yearColIdx<0) continue;
+      const smokeCols=[], nonSmokeCols=[];
+      row.forEach((c,idx)=>{
+        const n = normalizeKey(c);
+        if(n==='smokehaze') smokeCols.push(idx);
+        if(n==='nonsmokehaze') nonSmokeCols.push(idx);
+      });
+      if(!smokeCols.length || !nonSmokeCols.length) continue;
+      const classifyColType = (colIdx)=>{
+        for(let rr=r+1; rr<Math.min(r+8,aoa.length); rr++){
+          const v = aoa[rr] ? aoa[rr][colIdx] : null;
+          if(v!=null) return typeof v === 'string' ? 'text' : 'number';
+        }
+        return null;
+      };
+      let smokeCatCol=null, nonSmokeCatCol=null;
+      smokeCols.forEach(idx=>{ if(classifyColType(idx)==='text') smokeCatCol=idx; });
+      nonSmokeCols.forEach(idx=>{ if(classifyColType(idx)==='text') nonSmokeCatCol=idx; });
+      if(smokeCatCol==null || nonSmokeCatCol==null) continue;
+      const years = {};
+      for(let rr=r+1; rr<aoa.length; rr++){
+        const dr = aoa[rr];
+        if(!dr) continue;
+        const yv = dr[yearColIdx];
+        if(typeof yv !== 'number') continue;
+        const yr = Math.round(yv);
+        const sc = dr[smokeCatCol]!=null ? String(dr[smokeCatCol]).trim() : null;
+        const nc = dr[nonSmokeCatCol]!=null ? String(dr[nonSmokeCatCol]).trim() : null;
+        years[yr] = {smoke: sc, nonSmoke: nc};
+      }
+      if(Object.keys(years).length) return {years, sheetName};
+    }
+  }
+  return null;
+}
+
+function fmt(n){ return Math.round(n).toLocaleString('en-US'); }
+function fmtPM(m, s){ return `${fmt(m)} ± ${fmt(s)}`; }
+function fmtPct(n){ const sign = n>0?'+':''; return `${sign}${n.toFixed(1)}%`; }
+
+function groupStatsFull(years, periodKey){
+  const perProvince = {};
+  PROVINCE_ORDER.forEach(p=>{
+    const arr = years.map(y=>y[periodKey][p]);
+    perProvince[p] = {mean: mean(arr), sd: sdSample(arr)};
+  });
+  const sum8arr = years.map(y=>sum8(y[periodKey]));
+  const sum9arr = years.map(y=>sum9(y[periodKey]));
+  return {perProvince, s8:{mean:mean(sum8arr), sd:sdSample(sum8arr)}, s9:{mean:mean(sum9arr), sd:sdSample(sum9arr)}, n:years.length};
+}
+
+function renderStats(data){
+  const el = document.getElementById('statRow');
+  const yrs = data.years;
+  const range = yrs.length ? `${yrs[0].year}–${yrs[yrs.length-1].year}` : '—';
+  el.innerHTML = `
+    <div class="stat"><div class="k">จำนวนปีที่พบ</div><div class="v">${yrs.length}</div></div>
+    <div class="stat"><div class="k">ช่วงปี</div><div class="v">${range}</div></div>
+    <div class="stat"><div class="k">sheet ที่ข้าม (ไม่ใช่ปี)</div><div class="v">${data.skippedSheets.length}</div></div>
+  `;
+}
+function renderWarnings(data){
+  const el = document.getElementById('warnBox');
+  const items = [...data.headerWarnings];
+  if(data.negativeCount>0) items.push(`พบค่าติดลบ ${data.negativeCount} จุด ถูกปรับเป็น 0 ในการคำนวณ`);
+  if(data.skippedSheets.length) items.push(`ข้าม sheet ที่ชื่อไม่ใช่ปี: ${data.skippedSheets.join(', ')}`);
+  if(!items.length){ el.innerHTML=''; return; }
+  el.innerHTML = `<div class="warn-box"><h3>สิ่งที่ควรตรวจสอบ</h3><ul>${items.map(w=>`<li>${w}</li>`).join('')}</ul></div>`;
+}
+
+function renderPeriods(){
+  document.getElementById('periods').innerHTML = PERIOD_DEFS.map(pd=>buildPeriodBlock(pd)).join('');
+}
+
+function yearSetKey(arr){ return arr.slice().sort((a,b)=>a-b).join(','); }
+
+function buildPeriodBlock(pd){
+  const years = parsedData.years;
+  const sortedYears = years.map(y=>y.year).sort((a,b)=>a-b);
+  const includedYears = years.filter(y=>y.include[pd.key]).map(y=>y.year);
+  const includedKey = yearSetKey(includedYears);
+
+  const presets = [
+    {label:`ทั้งหมด (${sortedYears.length} ปี)`, yrs: sortedYears},
+    {label:'11 ปีล่าสุด', yrs: sortedYears.slice(-11)},
+    {label:'5 ปีล่าสุด', yrs: sortedYears.slice(-5)}
+  ];
+  const presetBtns = presets.map(p=>{
+    const active = includedKey === yearSetKey(p.yrs) ? ' active' : '';
+    return `<button type="button" class="chip preset-chip${active}" data-period="${pd.key}" data-years="${p.yrs.join(',')}">${p.label}</button>`;
+  }).join('');
+
+  const yearChips = years.map(y=>
+    `<button type="button" class="chip year-chip${y.include[pd.key]?' active':''}" data-period="${pd.key}" data-year="${y.year}">${y.year}</button>`
+  ).join('');
+
+  let chipsHtml = `
+    <div class="chiprow"><span class="lbl">ช่วง Baseline เร็วๆ:</span>${presetBtns}</div>
+    <div class="chiprow"><span class="lbl">เลือกปีเอง (คลิกเพื่อรวม/ไม่รวม):</span>${yearChips}</div>
+  `;
+  if(ensoData && pd.ensoField){
+    const broadCats = {}, fineCats = {};
+    years.forEach(y=>{
+      const rec = ensoData.years[y.year];
+      const raw = rec ? rec[pd.ensoField] : null;
+      if(!raw) return;
+      const b = broadEnso(raw), f = canonicalizeFine(raw);
+      if(b){ (broadCats[b]=broadCats[b]||[]).push(y.year); }
+      if(f){ (fineCats[f]=fineCats[f]||[]).push(y.year); }
+    });
+    const chipBtn = (label, yrs)=>{
+      const active = includedKey === yearSetKey(yrs) ? ' active' : '';
+      return `<button type="button" class="chip enso-chip${active}" data-period="${pd.key}" data-years="${yrs.join(',')}">${label} (n=${yrs.length})</button>`;
+    };
+    const broadBtns = BROAD_ORDER.filter(c=>broadCats[c]).map(c=>chipBtn(c, broadCats[c])).join('');
+    const fineBtns = FINE_ORDER.filter(c=>fineCats[c]).map(c=>chipBtn(c, fineCats[c])).join('');
+    if(broadBtns) chipsHtml += `<div class="chiprow"><span class="lbl">กลุ่ม ENSO หลัก:</span>${broadBtns}</div>`;
+    if(fineBtns) chipsHtml += `<div class="chiprow"><span class="lbl">กลุ่ม ENSO ย่อย (ความรุนแรง):</span>${fineBtns}</div>`;
+  }
+
+  const rows = years.map(y=>{
+    const vals = y[pd.key];
+    const s8v = sum8(vals), s9v = sum9(vals);
+    const flagged = y.include[pd.key]===false;
+    const lastNZ = y.lastNonZero ? `${y.lastNonZero.day} ${MONTH_TH[y.lastNonZero.month]}` : '—';
+    const noteBadge = flagged ? `<span class="note-badge">ปีล่าสุด อาจยังไม่ครบปี</span>` : '';
+    return `<tr class="${flagged?'flagged':''}">
+      <td>${y.year}</td>
+      <td>ข้อมูลถึง ${lastNZ}${noteBadge}</td>
+      ${PROVINCE_ORDER.map(p=>`<td>${fmt(vals[p])}</td>`).join('')}
+      <td class="sum8">${fmt(s8v)}</td>
+      <td class="sum9">${fmt(s9v)}</td>
+      <td class="chk-cell"><input type="checkbox" class="avg-toggle" data-period="${pd.key}" data-year="${y.year}" ${y.include[pd.key]?'checked':''} aria-label="รวมปี ${y.year} ใน baseline (${pd.key})"></td>
+    </tr>`;
+  }).join('');
+
+  const included = years.filter(y=>y.include[pd.key]);
+  const stats = groupStatsFull(included, pd.key);
+  const avgRow = `<tr class="avg-row">
+    <td>Baseline</td>
+    <td>${included.length} ปีที่เลือก</td>
+    ${PROVINCE_ORDER.map(p=>`<td>${fmtPM(stats.perProvince[p].mean, stats.perProvince[p].sd)}</td>`).join('')}
+    <td class="sum8">${fmtPM(stats.s8.mean, stats.s8.sd)}</td>
+    <td class="sum9">${fmtPM(stats.s9.mean, stats.s9.sd)}</td>
+    <td></td>
+  </tr>`;
+
+  const cmpYear = compareYearByPeriod[pd.key];
+  let cmpRowsHtml = '';
+  const yearOptions = years.map(y=>`<option value="${y.year}" ${String(y.year)===String(cmpYear)?'selected':''}>${y.year}</option>`).join('');
+  if(cmpYear){
+    const yRec = years.find(y=>String(y.year)===String(cmpYear));
+    if(yRec){
+      const vals = yRec[pd.key];
+      const s8v = sum8(vals), s9v = sum9(vals);
+      cmpRowsHtml = `<tr class="cmp-row">
+        <td>ปี ${cmpYear}</td><td>ค่าจริง</td>
+        ${PROVINCE_ORDER.map(p=>`<td>${fmt(vals[p])}</td>`).join('')}
+        <td class="sum8">${fmt(s8v)}</td><td class="sum9">${fmt(s9v)}</td><td></td>
+      </tr>
+      <tr class="diff-row">
+        <td>ผลต่างจาก baseline</td><td></td>
+        ${PROVINCE_ORDER.map(p=>`<td>${vals[p]-stats.perProvince[p].mean>=0?'+':''}${fmt(vals[p]-stats.perProvince[p].mean)}</td>`).join('')}
+        <td class="sum8">${s8v-stats.s8.mean>=0?'+':''}${fmt(s8v-stats.s8.mean)}</td>
+        <td class="sum9">${s9v-stats.s9.mean>=0?'+':''}${fmt(s9v-stats.s9.mean)} (${fmtPct(stats.s9.mean?(s9v-stats.s9.mean)/stats.s9.mean*100:0)})</td>
+        <td></td>
+      </tr>`;
+    }
+  }
+
+  return `<div class="period">
+    <h2>${pd.title}</h2>
+    <p class="period-note">${pd.note}</p>
+    ${chipsHtml}
+    <div class="table-scroll"><table>
+      <thead><tr>
+        <th>ปี</th><th>หมายเหตุ</th>
+        ${PROVINCE_ORDER.map(p=>`<th>${PROVINCE_LABEL[p]}</th>`).join('')}
+        <th class="sum8">8 จว.</th><th class="sum9">9 จว.</th><th>Baseline?</th>
+      </tr></thead>
+      <tbody>${rows}${avgRow}${cmpRowsHtml}</tbody>
+    </table></div>
+    <div class="cmp-controls">
+      <label for="cmp-${pd.key}">เทียบ baseline กับปี:</label>
+      <select id="cmp-${pd.key}" class="cmp-select" data-period="${pd.key}">
+        <option value="">— เลือกปี —</option>
+        ${yearOptions}
+      </select>
+    </div>
+  </div>`;
+}
+
+const rankingState = {period:'allYear', target:'province', basis:'baseline', basisYear:null, sumMode:'sum9'};
+let monthlySelectedYear = null;
+
+function sumByMode(vals, mode){ return mode==='sum8' ? sum8(vals) : sum9(vals); }
+
+function renderRanking(){
+  const wrap = document.getElementById('rankingTableWrap');
+  if(!parsedData || !parsedData.years.length){ wrap.innerHTML=''; return; }
+  const years = parsedData.years;
+  const period = rankingState.period;
+  const sumMode = rankingState.sumMode;
+
+  document.getElementById('rankBasisWrap').style.display = rankingState.target==='province' ? '' : 'none';
+  document.getElementById('rankBasisYearWrap').style.display = (rankingState.target==='province' && rankingState.basis==='year') ? '' : 'none';
+  const basisYearSelect = document.getElementById('rankBasisYear');
+  if(basisYearSelect.dataset.filled !== '1'){
+    basisYearSelect.innerHTML = years.map(y=>`<option value="${y.year}">${y.year}</option>`).join('');
+    basisYearSelect.dataset.filled = '1';
+    if(!rankingState.basisYear) rankingState.basisYear = years[years.length-1].year;
+    basisYearSelect.value = rankingState.basisYear;
+  }
+
+  const included = years.filter(y=>y.include[period]);
+  const baselineStats = groupStatsFull(included, period);
+
+  let html = '';
+  if(rankingState.target==='province'){
+    let valsSource, labelNote;
+    if(rankingState.basis==='year'){
+      const yRec = years.find(y=>y.year===Number(rankingState.basisYear));
+      valsSource = yRec ? yRec[period] : emptyVals();
+      labelNote = `ค่าจริงปี ${rankingState.basisYear}`;
+    }else{
+      const m = {}; PROVINCE_ORDER.forEach(p=>m[p]=baselineStats.perProvince[p].mean);
+      valsSource = m;
+      labelNote = `Baseline mean (${included.length} ปีที่เลือกในตาราง ${period})`;
+    }
+    const total = sumByMode(valsSource, sumMode) || 1;
+    const ranked = PROVINCE_ORDER.map(p=>({province:p, value:valsSource[p]})).sort((a,b)=>b.value-a.value);
+    const rows = ranked.map((r,i)=>`<tr><td>${i+1}</td><td>${PROVINCE_LABEL[r.province]}</td><td>${fmt(r.value)}</td><td>${(r.value/total*100).toFixed(1)}%</td></tr>`).join('');
+    html = `<p class="period-note">${labelNote}</p>
+      <div class="table-scroll"><table><thead><tr><th>อันดับ</th><th>จังหวัด</th><th>ค่า</th><th>% ของรวม${sumMode==='sum8'?' (8 จว.)':' (9 จว.)'}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }else{
+    const baselineVals = {}; PROVINCE_ORDER.forEach(p=>baselineVals[p]=baselineStats.perProvince[p].mean);
+    const baseVal = sumByMode(baselineVals, sumMode);
+    const ranked = years.map(y=>{
+      const val = sumByMode(y[period], sumMode);
+      const diff = val - baseVal;
+      return {year:y.year, value:val, diff, pct: baseVal ? diff/baseVal*100 : 0, flagged: y.include[period]===false};
+    }).sort((a,b)=>b.value-a.value);
+    const rows = ranked.map((r,i)=>`<tr class="${r.flagged?'flagged':''}"><td>${i+1}</td><td>${r.year}</td><td>${fmt(r.value)}</td><td>${r.diff>=0?'+':''}${fmt(r.diff)}</td><td>${fmtPct(r.pct)}</td></tr>`).join('');
+    html = `<p class="period-note">เทียบกับ Baseline mean ของปีที่เลือกไว้ในตาราง ${period} ด้านบน (${included.length} ปี)</p>
+      <div class="table-scroll"><table><thead><tr><th>อันดับ</th><th>ปี</th><th>ค่า${sumMode==='sum8'?' (8 จว.)':' (9 จว.)'}</th><th>ผลต่างจาก Baseline</th><th>%ผลต่าง</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  wrap.innerHTML = html;
+}
+
+function renderMonthly(){
+  if(!parsedData || !parsedData.years.length) return;
+  const years = parsedData.years;
+  const yearSelect = document.getElementById('monthlyYearSelect');
+  if(yearSelect.dataset.filled !== '1'){
+    yearSelect.innerHTML = years.map(y=>`<option value="${y.year}">${y.year}</option>`).join('');
+    yearSelect.dataset.filled = '1';
+    if(!monthlySelectedYear) monthlySelectedYear = years[years.length-1].year;
+    yearSelect.value = monthlySelectedYear;
+  }
+  const yRec = years.find(y=>y.year===Number(monthlySelectedYear));
+  if(!yRec) return;
+
+  let rows = '';
+  for(let m=1;m<=12;m++){
+    const vals = yRec.monthly[m];
+    rows += `<tr><td>${MONTH_TH[m]}</td>${PROVINCE_ORDER.map(p=>`<td>${fmt(vals[p])}</td>`).join('')}<td class="sum8">${fmt(sum8(vals))}</td><td class="sum9">${fmt(sum9(vals))}</td></tr>`;
+  }
+  document.getElementById('monthlyTableWrap').innerHTML = `<div class="table-scroll"><table>
+    <thead><tr><th>เดือน</th>${PROVINCE_ORDER.map(p=>`<th>${PROVINCE_LABEL[p]}</th>`).join('')}<th class="sum8">8 จว.</th><th class="sum9">9 จว.</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+
+  const rankArr = [];
+  for(let m=1;m<=12;m++){ rankArr.push({month:m, value: sum9(yRec.monthly[m])}); }
+  rankArr.sort((a,b)=>b.value-a.value);
+  const rankRows = rankArr.map((r,i)=>`<tr><td>${i+1}</td><td>${MONTH_TH[r.month]}</td><td>${fmt(r.value)}</td></tr>`).join('');
+  document.getElementById('monthlyRankWrap').innerHTML = `<div class="table-scroll"><table>
+    <thead><tr><th>อันดับ</th><th>เดือน</th><th>9 จว. รวม</th></tr></thead><tbody>${rankRows}</tbody></table></div>`;
+}
+
+document.getElementById('rankPeriod').addEventListener('change', e=>{ rankingState.period = e.target.value; renderRanking(); });
+document.getElementById('rankTarget').addEventListener('change', e=>{ rankingState.target = e.target.value; renderRanking(); });
+document.getElementById('rankBasis').addEventListener('change', e=>{ rankingState.basis = e.target.value; renderRanking(); });
+document.getElementById('rankBasisYear').addEventListener('change', e=>{ rankingState.basisYear = e.target.value; renderRanking(); });
+document.getElementById('rankSumMode').addEventListener('change', e=>{ rankingState.sumMode = e.target.value; renderRanking(); });
+document.getElementById('monthlyYearSelect').addEventListener('change', e=>{ monthlySelectedYear = e.target.value; renderMonthly(); });
+
+function renderAll(){
+  renderStats(parsedData);
+  renderWarnings(parsedData);
+  renderPeriods();
+  document.getElementById('rankBasisYear').dataset.filled = '0';
+  document.getElementById('monthlyYearSelect').dataset.filled = '0';
+  renderRanking();
+  renderMonthly();
+  document.getElementById('results').classList.add('show');
+}
+
+document.getElementById('periods').addEventListener('change', e=>{
+  if(e.target.classList.contains('avg-toggle')){
+    const yr = parseInt(e.target.dataset.year,10);
+    const period = e.target.dataset.period;
+    const rec = parsedData.years.find(y=>y.year===yr);
+    if(rec){ rec.include[period] = e.target.checked; renderPeriods(); renderRanking(); }
+    return;
+  }
+  if(e.target.classList.contains('cmp-select')){
+    const period = e.target.dataset.period;
+    compareYearByPeriod[period] = e.target.value || null;
+    renderPeriods();
+  }
+});
+document.getElementById('periods').addEventListener('click', e=>{
+  if(e.target.classList.contains('enso-chip') || e.target.classList.contains('preset-chip')){
+    const period = e.target.dataset.period;
+    const yearsToCheck = e.target.dataset.years.split(',').filter(Boolean).map(Number);
+    const set = new Set(yearsToCheck);
+    parsedData.years.forEach(y=>{ y.include[period] = set.has(y.year); });
+    renderPeriods(); renderRanking();
+    return;
+  }
+  if(e.target.classList.contains('year-chip')){
+    const yr = parseInt(e.target.dataset.year,10);
+    const period = e.target.dataset.period;
+    const rec = parsedData.years.find(y=>y.year===yr);
+    if(rec){ rec.include[period] = !rec.include[period]; renderPeriods(); renderRanking(); }
+  }
+});
+
+function handleFile(file){
+  const status = document.getElementById('status');
+  status.textContent = 'กำลังอ่านไฟล์...';
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      parsedData = processWorkbook(wb);
+      if(!parsedData.years.length){
+        status.textContent = 'ไม่พบ sheet ที่ชื่อเป็นปี (เช่น "2012") ในไฟล์นี้ — ตรวจสอบว่าอัปโหลดไฟล์ที่ถูกต้อง';
+        document.getElementById('results').classList.remove('show');
+        return;
+      }
+      status.textContent = '';
+      document.getElementById('filebar').style.display = 'flex';
+      document.getElementById('fname').textContent = file.name;
+      document.getElementById('fmeta').textContent = `${(file.size/1024/1024).toFixed(2)} MB`;
+      renderAll();
+    }catch(err){
+      console.error(err);
+      status.textContent = 'อ่านไฟล์ไม่สำเร็จ — ตรวจสอบว่าเป็นไฟล์ .xlsx ที่ไม่เสียหาย';
+    }
+  };
+  reader.onerror = ()=>{ status.textContent = 'อ่านไฟล์ไม่สำเร็จ'; };
+  reader.readAsArrayBuffer(file);
+}
+
+function handleEnsoFile(file){
+  const prev = document.getElementById('ensoPreview');
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const parsed = parseEnsoWorkbook(wb);
+      if(!parsed){ prev.textContent = 'ไม่พบคอลัมน์ "Year" ในไฟล์นี้ — ตรวจสอบโครงสร้างไฟล์'; return; }
+      ensoData = parsed;
+      const yrs = Object.keys(parsed.years).map(Number).sort((a,b)=>a-b);
+      const readyNote = parsedData ? '' : ' — อัปโหลดไฟล์ raw หลัก (sheet ต่อปี) ด้านบนด้วย เพื่อให้ปุ่มลัดกลุ่ม ENSO ปรากฏในตาราง';
+      prev.textContent = `อ่านสำเร็จจาก sheet "${parsed.sheetName}" — พบ ${yrs.length} ปี (${yrs[0]}–${yrs[yrs.length-1]})${readyNote}`;
+      if(parsedData) renderPeriods();
+    }catch(err){
+      console.error(err);
+      prev.textContent = 'อ่านไฟล์ ENSO ไม่สำเร็จ';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+dropzone.addEventListener('click', ()=>fileInput.click());
+dropzone.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fileInput.click(); }});
+fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+['dragenter','dragover'].forEach(ev=>dropzone.addEventListener(ev, e=>{ e.preventDefault(); dropzone.classList.add('drag'); }));
+['dragleave','drop'].forEach(ev=>dropzone.addEventListener(ev, e=>{ e.preventDefault(); dropzone.classList.remove('drag'); }));
+dropzone.addEventListener('drop', e=>{ const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) handleFile(f); });
+document.getElementById('reuploadBtn').addEventListener('click', ()=>fileInput.click());
+
+const ensoDropzone = document.getElementById('ensoDropzone');
+const ensoInput = document.getElementById('ensoInput');
+ensoDropzone.addEventListener('click', ()=>ensoInput.click());
+ensoDropzone.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); ensoInput.click(); }});
+ensoInput.addEventListener('change', ()=>{ if(ensoInput.files[0]) handleEnsoFile(ensoInput.files[0]); });
+['dragenter','dragover'].forEach(ev=>ensoDropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); ensoDropzone.classList.add('drag'); }));
+['dragleave','drop'].forEach(ev=>ensoDropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); ensoDropzone.classList.remove('drag'); }));
+ensoDropzone.addEventListener('drop', e=>{ const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) handleEnsoFile(f); });
+
+document.getElementById('dlXlsx').addEventListener('click', async ()=>{
+  const msg = document.getElementById('dlMsg');
+  if(!parsedData) return;
+  const wb = XLSX.utils.book_new();
+  PERIOD_DEFS.forEach(pd=>{
+    const header = ['Year','Last data (non-zero)', ...PROVINCE_ORDER.map(p=>PROVINCE_LABEL[p]), '8 Province (excl. Tak)', '9 Province', 'Included in baseline'];
+    const aoa = [header];
+    parsedData.years.forEach(y=>{
+      const vals = y[pd.key];
+      const lastNZ = y.lastNonZero ? `${y.lastNonZero.day} ${MONTH_TH[y.lastNonZero.month]}` : '';
+      aoa.push([y.year, lastNZ, ...PROVINCE_ORDER.map(p=>Math.round(vals[p])), Math.round(sum8(vals)), Math.round(sum9(vals)), y.include[pd.key]?'Yes':'No']);
+    });
+    const included = parsedData.years.filter(y=>y.include[pd.key]);
+    const stats = groupStatsFull(included, pd.key);
+    aoa.push(['Baseline mean', `${included.length} years`, ...PROVINCE_ORDER.map(p=>Math.round(stats.perProvince[p].mean)), Math.round(stats.s8.mean), Math.round(stats.s9.mean), '']);
+    aoa.push(['Baseline SD', '', ...PROVINCE_ORDER.map(p=>Math.round(stats.perProvince[p].sd)), Math.round(stats.s8.sd), Math.round(stats.s9.sd), '']);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    XLSX.utils.book_append_sheet(wb, ws, pd.key==='allYear'?'All-Year':(pd.key==='smoke'?'Smoke Haze':'Non-Smoke Haze'));
+
+    // Ranking sheet (province by baseline, year by actual 9/8-province sum vs baseline)
+    const rankAoa = [['Ranking — Province (by baseline mean)']];
+    rankAoa.push(['Rank','Province','Baseline mean','% of total (9 prov)']);
+    const baselineMeanVals = Object.fromEntries(PROVINCE_ORDER.map(p=>[p, stats.perProvince[p].mean]));
+    const totalBaseline9 = sum9(baselineMeanVals);
+    const provRanked = PROVINCE_ORDER.map(p=>({p, v:stats.perProvince[p].mean})).sort((a,b)=>b.v-a.v);
+    provRanked.forEach((r,i)=>rankAoa.push([i+1, PROVINCE_LABEL[r.p], Math.round(r.v), totalBaseline9?(r.v/totalBaseline9*100).toFixed(1)+'%':'']));
+    rankAoa.push([]);
+    rankAoa.push(['Ranking — Year (9 Province sum, vs baseline)']);
+    rankAoa.push(['Rank','Year','9 Province sum','Diff vs baseline','% diff']);
+    const baseVal9 = totalBaseline9;
+    const yearRanked = parsedData.years.map(y=>{
+      const v = sum9(y[pd.key]); return {year:y.year, v, diff:v-baseVal9, pct: baseVal9?(v-baseVal9)/baseVal9*100:0};
+    }).sort((a,b)=>b.v-a.v);
+    yearRanked.forEach((r,i)=>rankAoa.push([i+1, r.year, Math.round(r.v), Math.round(r.diff), r.pct.toFixed(1)+'%']));
+    const rankWs = XLSX.utils.aoa_to_sheet(rankAoa);
+    XLSX.utils.book_append_sheet(wb, rankWs, (pd.key==='allYear'?'Rank All-Year':(pd.key==='smoke'?'Rank Smoke Haze':'Rank Non-Smoke')).slice(0,31));
+  });
+
+  // Monthly raw data sheet
+  const monthAoa = [['Year','Month', ...PROVINCE_ORDER.map(p=>PROVINCE_LABEL[p]), '8 Province (excl. Tak)', '9 Province']];
+  parsedData.years.forEach(y=>{
+    for(let m=1;m<=12;m++){
+      const vals = y.monthly[m];
+      monthAoa.push([y.year, MONTH_TH[m], ...PROVINCE_ORDER.map(p=>Math.round(vals[p])), Math.round(sum8(vals)), Math.round(sum9(vals))]);
+    }
+  });
+  const monthWs = XLSX.utils.aoa_to_sheet(monthAoa);
+  XLSX.utils.book_append_sheet(wb, monthWs, 'Monthly Raw Data');
+
+  const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  const blob = new Blob([wbout], {type:'application/octet-stream'});
+  try{ triggerDownload('hotspot_summary_baseline.xlsx', blob); msg.textContent=''; }
+  catch(err){ msg.textContent = 'บันทึกไฟล์ไม่สำเร็จ ลองอีกครั้ง'; }
+});
+
+document.getElementById('dlCsv').addEventListener('click', async ()=>{
+  const msg = document.getElementById('dlMsg');
+  if(!parsedData) return;
+  const lines = ['year,month,day,province_en,count'];
+  parsedData.rawRecords.forEach(r=>{ lines.push(`${r.year},${r.month},${r.day},${PROVINCE_LABEL[r.province]},${Math.round(r.count)}`); });
+  const csv = '\uFEFF' + lines.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  try{ triggerDownload('hotspot_raw_long.csv', blob); msg.textContent=''; }
+  catch(err){ msg.textContent = 'บันทึกไฟล์ไม่สำเร็จ ลองอีกครั้ง'; }
+});
+</script>
+</body>
+</html>
